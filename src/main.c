@@ -5,17 +5,27 @@
 #include <readline/history.h>
 #include "token.h"
 #include "lexer.h"
+#include "parser.h"
+#include "expand.h"
 
 int main(void) {
+    token_list_t tokens;
+    pipeline_t pipeline;
     char *line;
-    token_list_t list;
 
     printf("========================================\n");
     printf("    Shellforge\n");
     printf(" A Unix Style Shell written in C\n");
     printf("========================================\n");
 
-    while ((line = readline("shellforge$ ")) != NULL) {
+    while (1) {
+        line = readline("shellforge$ ");
+
+        if (line == NULL) {
+            printf("\nGoodbye!\n");
+            break;
+        }
+
         if (strlen(line) == 0) {
             free(line);
             continue;
@@ -23,27 +33,19 @@ int main(void) {
 
         add_history(line);
 
+        lexer(line, &tokens);
+        token_print(&tokens);
+
+        if (parse(&tokens, &pipeline)) {
+            expand_variables(&pipeline);
+            pipeline_print(&pipeline);
+        }
+
         if (strcmp(line, "exit") == 0) {
-            printf("Exiting...\n");
             free(line);
+            printf("Exiting...\n");
             break;
         }
-
-        if (strcmp(line, "history") == 0) {
-            HIST_ENTRY **hist = history_list();
-            printf("------ Command History ------\n");
-            if (hist) {
-                for (int i = 0; hist[i]; i++) {
-                    printf(" %2d  %s\n", i + 1, hist[i]->line);
-                }
-            }
-            printf("------------------------------\n");
-            free(line);
-            continue;
-        }
-
-        lexer(line, &list);
-        token_print(&list);
 
         free(line);
     }
